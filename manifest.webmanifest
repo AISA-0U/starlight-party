@@ -1,0 +1,11 @@
+{
+  "name": "星光派对",
+  "short_name": "星光派对",
+  "description": "洒满星星和彩带的移动端庆祝小程序",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#12072c",
+  "theme_color": "#12072c",
+  "orientation": "portrait-primary"
+}

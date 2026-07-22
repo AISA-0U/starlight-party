@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#12072c" />
+    <meta name="description" content="洒满星星和彩带的移动端庆祝小程序" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>愿心澄澈</title>
+  </head>
+  <body>
+    <main class="party" id="party">
+      <canvas id="effects" aria-hidden="true"></canvas>
+
+      <section class="hero" aria-label="星光">
+        <div class="glow" aria-hidden="true"></div>
+        <p class="eyebrow">A LITTLE MAGIC FOR YOU</p>
+        <h1>星光澄澈</h1>
+        <p class="subtitle">愿你每天的快乐，像星星一样闪闪发光</p>
+        <button class="wish-button" id="wishButton" type="button">
+          <span>打开星光彩蛋</span>
+          <span class="button-star" aria-hidden="true">✦</span>
+        </button>
+        <p class="hint">轻触空白处撒下彩带，也可以打开一份随机回忆</p>
+      </section>
+
+      <div class="shooting-star shooting-star-one" aria-hidden="true"></div>
+      <div class="shooting-star shooting-star-two" aria-hidden="true"></div>
+    </main>
+
+    <div class="egg-modal" id="eggModal" hidden>
+      <div class="egg-backdrop" data-close-modal></div>
+      <section
+        class="egg-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="eggTitle"
+        aria-describedby="eggDescription"
+      >
+        <div class="layer-card layer-card-back" aria-hidden="true"></div>
+        <div class="layer-card layer-card-middle" aria-hidden="true"></div>
+
+        <div class="egg-card">
+          <button class="egg-close" id="eggClose" type="button" aria-label="关闭彩蛋">×</button>
+
+          <div class="ticker" aria-hidden="true">
+            <div class="ticker-track" id="tickerTrack"></div>
+          </div>
+
+          <div class="egg-step is-active" data-step="intro">
+            <p class="egg-kicker">A SECRET JUST FOR YOU</p>
+            <div class="gift-orbit" aria-hidden="true">
+              <span>✦</span>
+              <span>✧</span>
+              <span>★</span>
+            </div>
+            <h2 id="eggTitle">这里藏着一张回忆</h2>
+            <p id="eggDescription">照片会从你的专属文件夹中随机出现。</p>
+            <button class="egg-action" id="unwrapButton" type="button">拆开彩蛋</button>
+          </div>
+
+          <div class="egg-step" data-step="draw" aria-hidden="true">
+            <p class="egg-kicker">MEMORY SHUFFLE</p>
+            <div class="memory-wheel" id="memoryWheel" aria-hidden="true">
+              <span>今天</span>
+              <span>幸运</span>
+              <span>闪光</span>
+              <span>回忆</span>
+            </div>
+            <h2>正在翻找星光相册</h2>
+            <p class="rolling-copy" id="rollingCopy">把快乐转到你面前...</p>
+            <button class="egg-action" id="drawButton" type="button">开始转圈抽取</button>
+          </div>
+
+          <div class="egg-step" data-step="photo" aria-hidden="true">
+            <p class="egg-kicker">YOUR STARLIGHT MOMENT</p>
+            <figure class="photo-frame">
+              <button class="photo-zoom-trigger" id="photoZoomTrigger" type="button" aria-label="放大查看照片" hidden>
+                <img id="memoryPhoto" alt="随机抽取的回忆照片" />
+                <span class="photo-zoom-hint" aria-hidden="true">点击放大</span>
+              </button>
+              <div class="photo-placeholder" id="photoPlaceholder">
+                <span aria-hidden="true">✦</span>
+                <strong>等待你的照片</strong>
+                <small>请将图片放入 assets/photos 并更新 photos.json</small>
+              </div>
+            </figure>
+            <p class="photo-message" id="photoMessage"></p>
+            <div class="photo-actions">
+              <button class="egg-action" id="againButton" type="button">再抽一张</button>
+              <button class="egg-action egg-action-secondary" id="realCloseButton" type="button">收好回忆</button>
+            </div>
+          </div>
+
+          <p class="close-tease" id="closeTease" aria-live="polite"></p>
+        </div>
+      </section>
+    </div>
+
+    <div class="photo-viewer" id="photoViewer" role="dialog" aria-modal="true" aria-label="照片大图预览" hidden>
+      <button class="photo-viewer-backdrop" type="button" aria-label="关闭照片预览"></button>
+      <img id="photoViewerImage" alt="放大的回忆照片" />
+      <button class="photo-viewer-close" id="photoViewerClose" type="button" aria-label="关闭照片预览">×</button>
+    </div>
+
+    <noscript>请开启 JavaScript 以查看星星彩带动画。</noscript>
+    <script src="./script.js" defer></script>
+  </body>
+</html>
