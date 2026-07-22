@@ -25,11 +25,15 @@ python -m http.server 8000
 
 ```json
 {
-  "photos": ["photo-01.jpg", "photo-02.png", "旅行合照.webp"]
+  "photos": ["photo-01.jpg", "photo-02.png", "旅行合照.webp"],
+  "specialPhoto": "特别照片.jpg",
+  "specialMessage": "这是看完所有回忆后，留给你的最后一颗星光。"
 }
 ```
 
 `messages` 数组用于配置照片下方随机出现的文案。浏览器出于安全限制不能直接枚举本地文件夹，因此照片文件和清单需要保持同步。
+
+普通照片在一轮浏览中不会重复。全部普通照片看完后，下一次抽取会显示 `specialPhoto`；特别照片在本次页面会话中只出现一次，之后普通照片会开启新一轮。
 
 ## 彩蛋流程
 

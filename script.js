@@ -16,6 +16,7 @@
   const memoryWheel = document.querySelector("#memoryWheel");
   const rollingCopy = document.querySelector("#rollingCopy");
   const tickerTrack = document.querySelector("#tickerTrack");
+  const photoFrame = document.querySelector(".photo-frame");
   const photoZoomTrigger = document.querySelector("#photoZoomTrigger");
   const memoryPhoto = document.querySelector("#memoryPhoto");
   const photoPlaceholder = document.querySelector("#photoPlaceholder");
@@ -31,9 +32,12 @@
   let height = 0;
   let animationFrame = 0;
   let photoPool = [];
+  let specialPhoto = "";
+  let specialMessage = "";
   let photoMessages = [];
   let photoMessageIndex = 0;
-  let lastPhotoIndex = -1;
+  let unseenPhotoIndexes = [];
+  let specialPhotoShown = false;
   let fakeCloseCount = 0;
   let lastFocusedElement = null;
   let photoPoolPromise = Promise.resolve();
@@ -66,13 +70,19 @@
       photoPool = Array.isArray(config.photos)
         ? config.photos.filter((photo) => typeof photo === "string" && photo.trim())
         : [];
+      specialPhoto = typeof config.specialPhoto === "string" ? config.specialPhoto.trim() : "";
+      specialMessage = typeof config.specialMessage === "string" ? config.specialMessage.trim() : "";
       photoMessages = Array.isArray(config.messages)
         ? config.messages.filter((message) => typeof message === "string" && message.trim())
         : [];
+      unseenPhotoIndexes = photoPool.map((_, index) => index);
     } catch (error) {
       console.warn("照片池加载失败：", error);
       photoPool = [];
+      specialPhoto = "";
+      specialMessage = "";
       photoMessages = [];
+      unseenPhotoIndexes = [];
     }
   }
 
@@ -134,34 +144,46 @@
     eggDialog.classList.add("is-teasing");
   }
 
-  function choosePhotoIndex() {
-    if (photoPool.length <= 1) return photoPool.length - 1;
-    let nextIndex = lastPhotoIndex;
-    while (nextIndex === lastPhotoIndex) {
-      nextIndex = Math.floor(Math.random() * photoPool.length);
+  function chooseNextPhoto() {
+    if (unseenPhotoIndexes.length) {
+      const position = Math.floor(Math.random() * unseenPhotoIndexes.length);
+      const [index] = unseenPhotoIndexes.splice(position, 1);
+      return { filename: photoPool[index], isSpecial: false };
     }
-    return nextIndex;
+
+    if (specialPhoto && !specialPhotoShown) {
+      specialPhotoShown = true;
+      return { filename: specialPhoto, isSpecial: true };
+    }
+
+    if (photoPool.length) {
+      unseenPhotoIndexes = photoPool.map((_, index) => index);
+      return chooseNextPhoto();
+    }
+
+    return null;
   }
 
   function revealRandomPhoto() {
-    const nextIndex = choosePhotoIndex();
+    const selection = chooseNextPhoto();
     const messages = photoMessages.length ? photoMessages : defaultMessages;
     const nextMessage = messages[photoMessageIndex % messages.length];
     photoMessage.textContent = nextMessage;
     photoMessageIndex += 1;
+    photoFrame.classList.toggle("is-special", Boolean(selection?.isSpecial));
 
-    if (nextIndex < 0) {
+    if (!selection) {
       memoryPhoto.removeAttribute("src");
       memoryPhoto.hidden = true;
       photoZoomTrigger.hidden = true;
       photoPlaceholder.hidden = false;
       photoMessage.textContent = "照片池准备好了，只差你放入照片。";
     } else {
-      lastPhotoIndex = nextIndex;
-      memoryPhoto.src = `./assets/photos/${encodeURIComponent(photoPool[nextIndex]).replace(/%2F/gi, "/")}`;
+      memoryPhoto.src = `./assets/photos/${encodeURIComponent(selection.filename).replace(/%2F/gi, "/")}`;
       memoryPhoto.hidden = false;
       photoZoomTrigger.hidden = false;
       photoPlaceholder.hidden = true;
+      if (selection.isSpecial && specialMessage) photoMessage.textContent = specialMessage;
     }
 
     showStep("photo");
