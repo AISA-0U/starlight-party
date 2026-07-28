@@ -32,7 +32,7 @@
   let height = 0;
   let animationFrame = 0;
   let photoPool = [];
-  let specialPhoto = "";
+  let specialPhoto = null;
   let specialMessage = "";
   let photoMessages = [];
   let photoMessageIndex = 0;
@@ -41,6 +41,7 @@
   let fakeCloseCount = 0;
   let lastFocusedElement = null;
   let photoPoolPromise = Promise.resolve();
+  let currentFullPhotoUrl = "";
 
   const defaultMessages = [
     "这一刻被星光悄悄收藏了。",
@@ -57,6 +58,44 @@
 
   const random = (min, max) => Math.random() * (max - min) + min;
 
+  function normalizePhotoAsset(entry) {
+    if (typeof entry === "string" && entry.trim()) {
+      return { thumb: entry.trim(), full: entry.trim() };
+    }
+    if (!entry || typeof entry !== "object") return null;
+    const thumb = typeof entry.thumb === "string" ? entry.thumb.trim() : "";
+    const full = typeof entry.full === "string" ? entry.full.trim() : "";
+    if (!thumb && !full) return null;
+    return { thumb: thumb || full, full: full || thumb };
+  }
+
+  function photoAssetUrl(path) {
+    const encodedPath = path
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    return `./assets/photos/${encodedPath}`;
+  }
+
+  function preloadImage(url, timeout = 15000) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      let settled = false;
+      const finish = (loaded) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        resolve({ loaded, url });
+      };
+      const timeoutId = window.setTimeout(() => finish(false), timeout);
+      image.addEventListener("load", () => finish(true), { once: true });
+      image.addEventListener("error", () => finish(false), { once: true });
+      image.src = url;
+    });
+  }
+
+  const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
+
   function setTicker() {
     const copy = tickerMessages.map((message) => `✦ ${message}`).join("　　");
     tickerTrack.textContent = `${copy}　　${copy}　　`;
@@ -68,9 +107,9 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const config = await response.json();
       photoPool = Array.isArray(config.photos)
-        ? config.photos.filter((photo) => typeof photo === "string" && photo.trim())
+        ? config.photos.map(normalizePhotoAsset).filter(Boolean)
         : [];
-      specialPhoto = typeof config.specialPhoto === "string" ? config.specialPhoto.trim() : "";
+      specialPhoto = normalizePhotoAsset(config.specialPhoto);
       specialMessage = typeof config.specialMessage === "string" ? config.specialMessage.trim() : "";
       photoMessages = Array.isArray(config.messages)
         ? config.messages.filter((message) => typeof message === "string" && message.trim())
@@ -79,7 +118,7 @@
     } catch (error) {
       console.warn("照片池加载失败：", error);
       photoPool = [];
-      specialPhoto = "";
+      specialPhoto = null;
       specialMessage = "";
       photoMessages = [];
       unseenPhotoIndexes = [];
@@ -117,10 +156,16 @@
   }
 
   function openPhotoViewer() {
-    if (!memoryPhoto.src || memoryPhoto.hidden) return;
+    if (!memoryPhoto.src || memoryPhoto.hidden || !currentFullPhotoUrl) return;
+    const requestedFullPhotoUrl = currentFullPhotoUrl;
     photoViewerImage.src = memoryPhoto.src;
     photoViewer.hidden = false;
     window.setTimeout(() => photoViewerClose.focus(), 0);
+    preloadImage(requestedFullPhotoUrl).then(({ loaded, url }) => {
+      if (loaded && !photoViewer.hidden && currentFullPhotoUrl === url) {
+        photoViewerImage.src = url;
+      }
+    });
   }
 
   function closePhotoViewer() {
@@ -148,12 +193,12 @@
     if (unseenPhotoIndexes.length) {
       const position = Math.floor(Math.random() * unseenPhotoIndexes.length);
       const [index] = unseenPhotoIndexes.splice(position, 1);
-      return { filename: photoPool[index], isSpecial: false };
+      return { asset: photoPool[index], isSpecial: false };
     }
 
     if (specialPhoto && !specialPhotoShown) {
       specialPhotoShown = true;
-      return { filename: specialPhoto, isSpecial: true };
+      return { asset: specialPhoto, isSpecial: true };
     }
 
     if (photoPool.length) {
@@ -164,22 +209,26 @@
     return null;
   }
 
-  function revealRandomPhoto() {
-    const selection = chooseNextPhoto();
+  function revealSelectedPhoto(selection, thumbnailLoaded) {
     const messages = photoMessages.length ? photoMessages : defaultMessages;
     const nextMessage = messages[photoMessageIndex % messages.length];
     photoMessage.textContent = nextMessage;
     photoMessageIndex += 1;
     photoFrame.classList.toggle("is-special", Boolean(selection?.isSpecial));
 
-    if (!selection) {
+    if (!selection || !thumbnailLoaded) {
+      currentFullPhotoUrl = "";
       memoryPhoto.removeAttribute("src");
       memoryPhoto.hidden = true;
       photoZoomTrigger.hidden = true;
       photoPlaceholder.hidden = false;
-      photoMessage.textContent = "照片池准备好了，只差你放入照片。";
+      photoMessage.textContent = selection
+        ? "照片加载超时了，请检查网络后再抽一次。"
+        : "照片池准备好了，只差你放入照片。";
     } else {
-      memoryPhoto.src = `./assets/photos/${encodeURIComponent(selection.filename).replace(/%2F/gi, "/")}`;
+      const thumbnailUrl = photoAssetUrl(selection.asset.thumb);
+      currentFullPhotoUrl = photoAssetUrl(selection.asset.full);
+      memoryPhoto.src = thumbnailUrl;
       memoryPhoto.hidden = false;
       photoZoomTrigger.hidden = false;
       photoPlaceholder.hidden = true;
@@ -194,6 +243,11 @@
     if (drawButton.disabled) return;
     drawButton.disabled = true;
     await photoPoolPromise;
+    const selection = chooseNextPhoto();
+    const thumbnailUrl = selection ? photoAssetUrl(selection.asset.thumb) : "";
+    const imageReady = selection
+      ? preloadImage(thumbnailUrl)
+      : Promise.resolve({ loaded: false, url: "" });
     memoryWheel.classList.add("is-spinning");
     let messageIndex = 0;
     rollingCopy.textContent = rollingMessages[messageIndex];
@@ -202,12 +256,13 @@
       rollingCopy.textContent = rollingMessages[messageIndex];
     }, reduceMotion.matches ? 700 : 380);
     const duration = reduceMotion.matches ? 500 : 2200;
-    window.setTimeout(() => {
-      window.clearInterval(messageTimer);
-      memoryWheel.classList.remove("is-spinning");
-      drawButton.disabled = false;
-      revealRandomPhoto();
-    }, duration);
+    await wait(duration);
+    rollingCopy.textContent = "正在把照片放进相框...";
+    const { loaded } = await imageReady;
+    window.clearInterval(messageTimer);
+    memoryWheel.classList.remove("is-spinning");
+    drawButton.disabled = false;
+    revealSelectedPhoto(selection, loaded);
   }
 
   class Particle {
@@ -356,6 +411,7 @@
   photoViewerClose.addEventListener("click", closePhotoViewer);
   photoViewer.querySelector(".photo-viewer-backdrop").addEventListener("click", closePhotoViewer);
   memoryPhoto.addEventListener("error", () => {
+    currentFullPhotoUrl = "";
     memoryPhoto.hidden = true;
     photoZoomTrigger.hidden = true;
     photoPlaceholder.hidden = false;

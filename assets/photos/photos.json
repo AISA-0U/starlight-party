@@ -1,24 +1,78 @@
 {
   "photos": [
-    "旅行 (1).jpg",
-    "旅行 (10).jpg",
-    "旅行 (11).jpg",
-    "旅行 (12).jpg",
-    "旅行 (13).jpg",
-    "旅行 (14).jpg",
-    "旅行 (15).jpg",
-    "旅行 (16).jpg",
-    "旅行 (17).jpg",
-    "旅行 (2).jpg",
-    "旅行 (3).jpg",
-    "旅行 (4).jpg",
-    "旅行 (5).jpg",
-    "旅行 (6).jpg",
-    "旅行 (7).jpg",
-    "旅行 (8).jpg",
-    "旅行 (9).jpg"
+    {
+      "thumb": "optimized/thumbs/旅行 (1).8157a8c85e.webp",
+      "full": "optimized/full/旅行 (1).8157a8c85e.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (10).eb484c8c86.webp",
+      "full": "optimized/full/旅行 (10).eb484c8c86.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (11).527c3bfcde.webp",
+      "full": "optimized/full/旅行 (11).527c3bfcde.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (12).f129c8dfdc.webp",
+      "full": "optimized/full/旅行 (12).f129c8dfdc.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (13).fea54daf75.webp",
+      "full": "optimized/full/旅行 (13).fea54daf75.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (14).d366b573fd.webp",
+      "full": "optimized/full/旅行 (14).d366b573fd.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (15).2a4f9073f5.webp",
+      "full": "optimized/full/旅行 (15).2a4f9073f5.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (16).3833d56bea.webp",
+      "full": "optimized/full/旅行 (16).3833d56bea.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (17).82edc5654f.webp",
+      "full": "optimized/full/旅行 (17).82edc5654f.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (2).2f1d976990.webp",
+      "full": "optimized/full/旅行 (2).2f1d976990.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (3).54d435ded2.webp",
+      "full": "optimized/full/旅行 (3).54d435ded2.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (4).d6f10fdd33.webp",
+      "full": "optimized/full/旅行 (4).d6f10fdd33.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (5).5943b06371.webp",
+      "full": "optimized/full/旅行 (5).5943b06371.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (6).981d5d0ca1.webp",
+      "full": "optimized/full/旅行 (6).981d5d0ca1.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (7).3d6d09c975.webp",
+      "full": "optimized/full/旅行 (7).3d6d09c975.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (8).1b46acb8b3.webp",
+      "full": "optimized/full/旅行 (8).1b46acb8b3.webp"
+    },
+    {
+      "thumb": "optimized/thumbs/旅行 (9).5eeeb526ef.webp",
+      "full": "optimized/full/旅行 (9).5eeeb526ef.webp"
+    }
   ],
-  "specialPhoto": "特别照片.jpg",
+  "specialPhoto": {
+    "thumb": "optimized/thumbs/特别照片.18e0d87696.webp",
+    "full": "optimized/full/特别照片.18e0d87696.webp"
+  },
   "specialMessage": "这是看完所有回忆后，留给你的最后一颗星光。",
   "messages": [
     "我的夏天总是孤独的",

@@ -1,0 +1,9 @@
+.venv-tools/
+__pycache__/
+*.pyc
+
+# Legacy optimizer output without a content fingerprint stays local.
+assets/photos/optimized/thumbs/*.webp
+assets/photos/optimized/full/*.webp
+!assets/photos/optimized/thumbs/*.*.webp
+!assets/photos/optimized/full/*.*.webp
