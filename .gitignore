@@ -7,3 +7,6 @@ assets/photos/optimized/thumbs/*.webp
 assets/photos/optimized/full/*.webp
 !assets/photos/optimized/thumbs/*.*.webp
 !assets/photos/optimized/full/*.*.webp
+
+# Build artifact for Netlify drag-and-drop deploys.
+starlight-party-publish.zip

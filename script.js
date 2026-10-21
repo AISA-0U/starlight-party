@@ -41,7 +41,12 @@
   let fakeCloseCount = 0;
   let lastFocusedElement = null;
   let photoPoolPromise = Promise.resolve();
-  let currentFullPhotoUrl = "";
+  let currentFullPhoto = null;
+
+  const imageCdnWidths = [400, 800, 1200];
+  // AVIF 的质量刻度比 WebP 更“紧”：q=50 观感接近原 WebP q=76，体积约为其一半。
+  const imageCdnQuality = 50;
+  const photoFrameSizes = "(max-height: 670px) 230px, (max-width: 480px) 92vw, 330px";
 
   const defaultMessages = [
     "这一刻被星光悄悄收藏了。",
@@ -77,7 +82,30 @@
     return `./assets/photos/${encodedPath}`;
   }
 
-  function preloadImage(url, timeout = 15000) {
+  function imageCdnUrl(path, width) {
+    const sourcePath = photoAssetUrl(path).replace(/^\./, "");
+    return `/.netlify/images?url=${encodeURIComponent(sourcePath)}&w=${width}&fm=avif&q=${imageCdnQuality}`;
+  }
+
+  // Netlify Image CDN 版本优先；本地 http.server 等不支持时回退到原始 WebP。
+  function thumbnailSources(asset) {
+    const direct = { src: photoAssetUrl(asset.thumb), srcset: "", sizes: "" };
+    if (!/^https?:$/.test(window.location.protocol)) return [direct];
+    const cdn = {
+      src: imageCdnUrl(asset.full, 800),
+      srcset: imageCdnWidths.map((size) => `${imageCdnUrl(asset.full, size)} ${size}w`).join(", "),
+      sizes: photoFrameSizes,
+    };
+    return [cdn, direct];
+  }
+
+  function fullPhotoSources(asset) {
+    const direct = photoAssetUrl(asset.full);
+    if (!/^https?:$/.test(window.location.protocol)) return [direct];
+    return [imageCdnUrl(asset.full, 1600), direct];
+  }
+
+  function preloadImage(url, timeout = 15000, srcset = "", sizes = "") {
     return new Promise((resolve) => {
       const image = new Image();
       let settled = false;
@@ -90,8 +118,20 @@
       const timeoutId = window.setTimeout(() => finish(false), timeout);
       image.addEventListener("load", () => finish(true), { once: true });
       image.addEventListener("error", () => finish(false), { once: true });
+      if (srcset) {
+        image.sizes = sizes;
+        image.srcset = srcset;
+      }
       image.src = url;
     });
+  }
+
+  async function preloadFirstAvailable(sources, toArgs) {
+    for (const source of sources) {
+      const { loaded } = await preloadImage(...toArgs(source));
+      if (loaded) return { loaded: true, source };
+    }
+    return { loaded: false, source: null };
   }
 
   const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
@@ -156,14 +196,14 @@
   }
 
   function openPhotoViewer() {
-    if (!memoryPhoto.src || memoryPhoto.hidden || !currentFullPhotoUrl) return;
-    const requestedFullPhotoUrl = currentFullPhotoUrl;
-    photoViewerImage.src = memoryPhoto.src;
+    if (!memoryPhoto.src || memoryPhoto.hidden || !currentFullPhoto) return;
+    const requestedFullPhoto = currentFullPhoto;
+    photoViewerImage.src = memoryPhoto.currentSrc || memoryPhoto.src;
     photoViewer.hidden = false;
     window.setTimeout(() => photoViewerClose.focus(), 0);
-    preloadImage(requestedFullPhotoUrl).then(({ loaded, url }) => {
-      if (loaded && !photoViewer.hidden && currentFullPhotoUrl === url) {
-        photoViewerImage.src = url;
+    preloadFirstAvailable(requestedFullPhoto, (url) => [url]).then(({ loaded, source }) => {
+      if (loaded && !photoViewer.hidden && currentFullPhoto === requestedFullPhoto) {
+        photoViewerImage.src = source;
       }
     });
   }
@@ -209,15 +249,16 @@
     return null;
   }
 
-  function revealSelectedPhoto(selection, thumbnailLoaded) {
+  function revealSelectedPhoto(selection, thumbnail) {
     const messages = photoMessages.length ? photoMessages : defaultMessages;
     const nextMessage = messages[photoMessageIndex % messages.length];
     photoMessage.textContent = nextMessage;
     photoMessageIndex += 1;
     photoFrame.classList.toggle("is-special", Boolean(selection?.isSpecial));
 
-    if (!selection || !thumbnailLoaded) {
-      currentFullPhotoUrl = "";
+    if (!selection || !thumbnail) {
+      currentFullPhoto = null;
+      memoryPhoto.removeAttribute("srcset");
       memoryPhoto.removeAttribute("src");
       memoryPhoto.hidden = true;
       photoZoomTrigger.hidden = true;
@@ -226,9 +267,14 @@
         ? "照片加载超时了，请检查网络后再抽一次。"
         : "照片池准备好了，只差你放入照片。";
     } else {
-      const thumbnailUrl = photoAssetUrl(selection.asset.thumb);
-      currentFullPhotoUrl = photoAssetUrl(selection.asset.full);
-      memoryPhoto.src = thumbnailUrl;
+      currentFullPhoto = fullPhotoSources(selection.asset);
+      if (thumbnail.srcset) {
+        memoryPhoto.sizes = thumbnail.sizes;
+        memoryPhoto.srcset = thumbnail.srcset;
+      } else {
+        memoryPhoto.removeAttribute("srcset");
+      }
+      memoryPhoto.src = thumbnail.src;
       memoryPhoto.hidden = false;
       photoZoomTrigger.hidden = false;
       photoPlaceholder.hidden = true;
@@ -244,10 +290,14 @@
     drawButton.disabled = true;
     await photoPoolPromise;
     const selection = chooseNextPhoto();
-    const thumbnailUrl = selection ? photoAssetUrl(selection.asset.thumb) : "";
     const imageReady = selection
-      ? preloadImage(thumbnailUrl)
-      : Promise.resolve({ loaded: false, url: "" });
+      ? preloadFirstAvailable(thumbnailSources(selection.asset), (source) => [
+          source.src,
+          undefined,
+          source.srcset,
+          source.sizes,
+        ])
+      : Promise.resolve({ loaded: false, source: null });
     memoryWheel.classList.add("is-spinning");
     let messageIndex = 0;
     rollingCopy.textContent = rollingMessages[messageIndex];
@@ -258,11 +308,11 @@
     const duration = reduceMotion.matches ? 500 : 2200;
     await wait(duration);
     rollingCopy.textContent = "正在把照片放进相框...";
-    const { loaded } = await imageReady;
+    const { source } = await imageReady;
     window.clearInterval(messageTimer);
     memoryWheel.classList.remove("is-spinning");
     drawButton.disabled = false;
-    revealSelectedPhoto(selection, loaded);
+    revealSelectedPhoto(selection, source);
   }
 
   class Particle {
@@ -411,7 +461,7 @@
   photoViewerClose.addEventListener("click", closePhotoViewer);
   photoViewer.querySelector(".photo-viewer-backdrop").addEventListener("click", closePhotoViewer);
   memoryPhoto.addEventListener("error", () => {
-    currentFullPhotoUrl = "";
+    currentFullPhoto = null;
     memoryPhoto.hidden = true;
     photoZoomTrigger.hidden = true;
     photoPlaceholder.hidden = false;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "starlight-party-v3";
+const CACHE_NAME = "starlight-party-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,7 +9,18 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      // 逐个缓存：单个资源缺失不再导致整个 Service Worker 安装失败
+      Promise.all(
+        ASSETS.map((asset) =>
+          cache.add(asset).catch((error) => {
+            console.warn("预缓存失败：", asset, error);
+          }),
+        ),
+      ),
+    ),
+  );
   self.skipWaiting();
 });
 
@@ -27,7 +38,9 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   const isPhotoConfig = requestUrl.pathname.endsWith("/assets/photos/photos.json");
-  const isPhoto = requestUrl.pathname.includes("/assets/photos/") && !isPhotoConfig;
+  const isPhoto =
+    (requestUrl.pathname.includes("/assets/photos/") && !isPhotoConfig) ||
+    requestUrl.pathname === "/.netlify/images";
 
   if (isPhotoConfig) {
     event.respondWith(
@@ -60,7 +73,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // 页面、样式和脚本：先用缓存秒开，同时后台更新，下次访问即可拿到新版本。
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request)),
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request)
+        .then((response) => {
+          if (response.ok && requestUrl.origin === self.location.origin) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+      if (cached) {
+        event.waitUntil(network);
+        return cached;
+      }
+      return network;
+    }),
   );
 });

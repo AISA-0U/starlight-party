@@ -1,0 +1,15 @@
+# 与 netlify.toml 等价的响应头配置（静态拖拽部署同样生效）
+/assets/photos/optimized/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/service-worker.js
+  Cache-Control: no-cache
+
+/assets/photos/photos.json
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Netlify-CDN-Cache-Control: public, max-age=0, stale-while-revalidate=86400
+
+/
+  Netlify-CDN-Cache-Control: public, max-age=0, stale-while-revalidate=86400
